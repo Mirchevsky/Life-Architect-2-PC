@@ -55,6 +55,7 @@ The compiled standalone executable will be located at `target\release\life-archi
 ## Contributing
 
 This is an open-source project and contributions are welcome. Whether you are fixing a bug, implementing a planned feature, or improving the documentation, feel free to open an issue or submit a pull request.
+
 ## License
 
 This project is licensed under the **Apache License 2.0**.
