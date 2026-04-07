@@ -40,18 +40,6 @@ This project is a case study in modern, native Windows desktop development, emph
 
 *   **Single Executable** — The build process produces a single, standalone `.exe` file with no external DLL dependencies, making distribution and installation effortless.
 
-## Building from Source
-
-Requirements: Rust stable toolchain + MSVC Build Tools (Windows)
-
-```powershell
-git clone https://github.com/Mirchevsky/Life-Architect-2-PC.git
-cd Life-Architect-2-PC
-cargo build --release
-```
-
-The compiled standalone executable will be located at `target\release\life-architect-2-pc.exe`.
-
 ## Contributing
 
 This is an open-source project and contributions are welcome. Whether you are fixing a bug, implementing a planned feature, or improving the documentation, feel free to open an issue or submit a pull request.
