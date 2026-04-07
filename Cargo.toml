@@ -1,6 +1,6 @@
 [package]
 name = "life-architect-2-pc"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
 description = "Life Architect 2 — Windows desktop app written 100% in Rust"
 
