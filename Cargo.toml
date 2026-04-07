@@ -1,0 +1,44 @@
+[package]
+name = "life-architect-2-pc"
+version = "0.1.0"
+edition = "2021"
+description = "Life Architect 2 — Windows desktop app written 100% in Rust"
+
+# Optimize for release builds: smaller binary, faster execution
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[dependencies]
+# iced: The pure Rust GUI framework. Provides the window, layout engine,
+# widget library, and GPU-accelerated renderer. No JavaScript, no WebView.
+iced = { version = "0.14", features = ["advanced"] }
+
+# rusqlite: SQLite database bindings for Rust. The "bundled" feature
+# compiles the SQLite C library directly into the .exe, so no external
+# sqlite3.dll is required on the user's machine.
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# serde + serde_json: The standard Rust serialization framework.
+# Used to serialize complex data (like the prerequisites list) into
+# JSON text for storage in SQLite text columns.
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# uuid: Generates universally unique identifiers for tasks and goals,
+# matching the UUID-based ID strategy used in the Android app.
+uuid = { version = "1.8", features = ["v4"] }
+
+# chrono: Date and time handling. Used for task creation timestamps,
+# due dates, and formatted display in the UI.
+chrono = { version = "0.4", features = ["serde"] }
+
+# dirs-next: Locates the user's %APPDATA% folder on Windows so the
+# SQLite database file is stored in the correct system location.
+dirs-next = "2.0"
+
+[build-dependencies]
+# winresource: Embeds Windows resources (application icon, version info)
+# into the .exe at compile time via build.rs. Only active on Windows targets.
+winresource = "0.1"
