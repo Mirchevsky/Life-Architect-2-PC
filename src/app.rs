@@ -1,5 +1,7 @@
 use crate::app_core::models::{Difficulty, Goal, Task};
 use crate::app_core::engine;
+use crate::data::daily_quote_engine::DailyQuote;
+use crate::data::global_events_engine::GlobalEvent;
 use iced::widget::{button, column, container, progress_bar, row, text};
 use iced::{Element, Length};
 use rusqlite::Connection;
@@ -10,6 +12,7 @@ use rusqlite::Connection;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Screen {
+    Dashboard,
     Tasks,
     Goals,
     Analytics,
@@ -17,7 +20,7 @@ pub enum Screen {
 
 impl Default for Screen {
     fn default() -> Self {
-        Screen::Tasks
+        Screen::Dashboard
     }
 }
 
@@ -41,12 +44,25 @@ pub struct LifeArchitect {
 
     // Goal creation form field
     pub new_goal_input: String,
+
+    // v0.4 — daily content (loaded once at startup, stable for the whole day)
+    pub daily_quote: DailyQuote,
+    pub today_event: GlobalEvent,
+    pub tomorrow_event_title: String,
 }
 
 impl LifeArchitect {
-    pub fn new(conn: Connection, tasks: Vec<Task>, goals: Vec<Goal>, total_xp: u32) -> Self {
+    pub fn new(
+        conn: Connection,
+        tasks: Vec<Task>,
+        goals: Vec<Goal>,
+        total_xp: u32,
+        daily_quote: DailyQuote,
+        today_event: GlobalEvent,
+        tomorrow_event_title: String,
+    ) -> Self {
         Self {
-            current_screen: Screen::Tasks,
+            current_screen: Screen::Dashboard,
             tasks,
             goals,
             total_xp,
@@ -57,6 +73,9 @@ impl LifeArchitect {
             new_task_due_date: String::new(),
             selected_difficulty: Difficulty::Medium,
             new_goal_input: String::new(),
+            daily_quote,
+            today_event,
+            tomorrow_event_title,
         }
     }
 }
@@ -123,10 +142,9 @@ impl LifeArchitect {
                 task.description = self.new_task_description.trim().to_string();
                 task.category    = self.new_task_category.trim().to_string();
 
-                // Parse due date from YYYY-MM-DD string
                 if !self.new_task_due_date.trim().is_empty() {
                     if let Ok(date) = chrono::NaiveDate::parse_from_str(
-                        self.new_task_due_date.trim(), "%Y-%m-%d"
+                        self.new_task_due_date.trim(), "%Y-%m-%d",
                     ) {
                         let dt = date.and_hms_opt(0, 0, 0)
                             .map(|ndt| ndt.and_utc().timestamp_millis());
@@ -137,7 +155,6 @@ impl LifeArchitect {
                 let _ = crate::data::task_dao::insert_task(&self.conn, &task);
                 self.tasks.push(task);
 
-                // Clear form
                 self.new_task_input.clear();
                 self.new_task_description.clear();
                 self.new_task_category.clear();
@@ -148,7 +165,6 @@ impl LifeArchitect {
             Message::ToggleTask(task_id) => {
                 if let Some(task) = self.tasks.iter_mut().find(|t| t.id == task_id) {
                     if task.is_completed {
-                        // Un-complete: deduct XP
                         let xp_reward = task.difficulty.xp_reward();
                         task.is_completed = false;
                         task.completed_at = None;
@@ -158,7 +174,6 @@ impl LifeArchitect {
                         let _ = crate::data::task_dao::subtract_xp(&self.conn, xp_reward);
                         self.total_xp = self.total_xp.saturating_sub(xp_reward);
                     } else {
-                        // Only allow completion if prerequisites are met
                         if !task.prerequisites_met() {
                             return;
                         }
@@ -192,7 +207,6 @@ impl LifeArchitect {
             Message::DeleteGoal(goal_id) => {
                 let _ = crate::data::goal_dao::delete_goal(&self.conn, &goal_id);
                 self.goals.retain(|g| g.id != goal_id);
-                // Unlink tasks in memory too
                 for task in self.tasks.iter_mut() {
                     if task.goal_id == goal_id {
                         task.goal_id.clear();
@@ -222,6 +236,9 @@ impl LifeArchitect {
             text(format!("{} / {} XP", xp_in_level as u32, xp_needed as u32)).size(12),
             progress_bar(0.0..=1.0, xp_progress),
             text("").size(16),
+            button("Dashboard")
+                .on_press(Message::NavigateTo(Screen::Dashboard))
+                .width(Length::Fill),
             button("  Tasks  ")
                 .on_press(Message::NavigateTo(Screen::Tasks))
                 .width(Length::Fill),
@@ -236,8 +253,31 @@ impl LifeArchitect {
         .padding(16)
         .width(Length::Fixed(200.0));
 
+        // --- Tasks-done-today count (for the dashboard stats row) ---
+        let today = chrono::Local::now().date_naive();
+        let tasks_done_today = self.tasks.iter().filter(|t| {
+            if let Some(ms) = t.completed_at {
+                chrono::DateTime::from_timestamp_millis(ms)
+                    .map(|dt: chrono::DateTime<chrono::Utc>| {
+                        dt.with_timezone(&chrono::Local).date_naive()
+                    })
+                    .unwrap_or_default()
+                    == today
+            } else {
+                false
+            }
+        }).count();
+
         // --- Main content ---
         let main_content: Element<Message> = match self.current_screen {
+            Screen::Dashboard => crate::ui::screens::dashboard::view(
+                &self.daily_quote,
+                &self.today_event,
+                &self.tomorrow_event_title,
+                level,
+                self.total_xp,
+                tasks_done_today,
+            ),
             Screen::Tasks => crate::ui::screens::task_list::view(
                 &self.tasks,
                 &self.new_task_input,

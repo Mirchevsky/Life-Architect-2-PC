@@ -105,6 +105,7 @@ pub fn mark_task_uncompleted(conn: &Connection, task_id: &str) -> Result<()> {
 // Update — prerequisites
 // ---------------------------------------------------------------------------
 
+#[allow(dead_code)]
 pub fn update_prerequisites(conn: &Connection, task_id: &str, prerequisites: &[Prerequisite]) -> Result<()> {
     let json = serde_json::to_string(prerequisites).unwrap_or_else(|_| "[]".to_string());
     conn.execute(

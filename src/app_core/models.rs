@@ -55,6 +55,7 @@ pub struct Prerequisite {
     pub completed_at: Option<i64>,
 }
 
+#[allow(dead_code)]
 impl Prerequisite {
     pub fn new(label: String) -> Self {
         Self {
